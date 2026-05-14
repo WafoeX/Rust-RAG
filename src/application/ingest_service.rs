@@ -6,6 +6,8 @@ use crate::domain::ports::{Embedder, VectorStore};
 use crate::infrastructure::document_loader::load_document_by_extension;
 use crate::utils::text_splitter::split_text_to_chunks;
 
+const EMBED_BATCH_SIZE: usize = 32;
+
 pub struct IngestService {
     embedder: Arc<dyn Embedder>,
     vector_store: Arc<dyn VectorStore>,
@@ -37,26 +39,35 @@ impl IngestService {
     pub async fn ingest(&self, file_path: &Path, file_name: &str) -> Result<IngestResult> {
         let document = load_document_by_extension(file_path, file_name)?;
         let document_id = document.id.clone();
-        let file_name = document.file_name.clone();
+        let doc_file_name = document.file_name.clone();
 
         let chunks = split_text_to_chunks(&document, self.chunk_size, self.chunk_overlap);
+        let total_chunks = chunks.len();
 
         if chunks.is_empty() {
             return Ok(IngestResult {
                 document_id,
-                file_name,
+                file_name: doc_file_name,
                 chunk_count: 0,
             });
         }
 
-        let texts: Vec<String> = chunks.iter().map(|c| c.content.clone()).collect();
-        let vectors = self.embedder.embed_texts(&texts).await?;
-        self.vector_store.upsert_chunks(&chunks, &vectors).await?;
+        // Process in batches to limit memory for large documents
+        for batch_chunks in chunks.chunks(EMBED_BATCH_SIZE) {
+            let texts: Vec<String> = batch_chunks.iter().map(|c| c.content.clone()).collect();
+            let vectors = self.embedder.embed_texts(&texts).await?;
+            self.vector_store.upsert_chunks(batch_chunks, &vectors).await?;
+            tracing::debug!(
+                "Upserted batch of {} chunks for '{}'",
+                batch_chunks.len(),
+                doc_file_name
+            );
+        }
 
         Ok(IngestResult {
             document_id,
-            file_name,
-            chunk_count: chunks.len(),
+            file_name: doc_file_name,
+            chunk_count: total_chunks,
         })
     }
 }

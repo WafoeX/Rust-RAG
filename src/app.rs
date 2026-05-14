@@ -5,6 +5,7 @@ use axum::{
     Router,
 };
 use std::sync::Arc;
+use tower::limit::ConcurrencyLimitLayer;
 use tower_http::cors::CorsLayer;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
@@ -23,6 +24,10 @@ pub async fn build_app(config: AppConfig) -> Result<Router> {
     // This is read by hf-hub internally; must be set at the process level.
     std::env::set_var("HF_ENDPOINT", &config.hf_endpoint);
     std::env::set_var("HF_HOME", &config.hf_cache_dir);
+    // Limit ONNX Runtime thread count to reduce memory (default uses all cores).
+    // Each thread allocates its own memory arena for computation.
+    std::env::set_var("RAYON_NUM_THREADS", "2");
+    std::env::set_var("OMP_NUM_THREADS", "2");
     tracing::info!("HF_ENDPOINT set to: {}", config.hf_endpoint);
 
     // Create embedder
@@ -78,6 +83,7 @@ pub async fn build_app(config: AppConfig) -> Result<Router> {
         .route("/api/query", post(query::query))
         .route_service("/", ServeFile::new("static/index.html"))
         .nest_service("/static", ServeDir::new("static"))
+        .layer(ConcurrencyLimitLayer::new(8))
         .layer(DefaultBodyLimit::max(100 * 1024 * 1024)) // 100MB for file uploads
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())

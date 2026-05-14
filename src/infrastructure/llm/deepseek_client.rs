@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use reqwest::Client;
@@ -15,8 +17,15 @@ pub struct DeepSeekClient {
 
 impl DeepSeekClient {
     pub fn new(config: &AppConfig) -> Self {
+        let client = Client::builder()
+            .pool_max_idle_per_host(2)
+            .pool_idle_timeout(Duration::from_secs(30))
+            .timeout(Duration::from_secs(60))
+            .build()
+            .expect("Failed to build reqwest client");
+
         Self {
-            client: Client::new(),
+            client,
             api_key: config.deepseek_api_key.clone(),
             base_url: config.deepseek_base_url.clone(),
             model: config.deepseek_model.clone(),

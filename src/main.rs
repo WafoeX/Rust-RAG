@@ -2,7 +2,7 @@ use anyhow::Result;
 use rust_rag::app;
 use rust_rag::config;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
