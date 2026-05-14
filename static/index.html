@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rust RAG 知识库问答</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>Rust RAG 知识库问答</h1>
+        <nav>
+            <button class="tab active" data-tab="upload">上传文档</button>
+            <button class="tab" data-tab="chat">智能问答</button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Upload Panel -->
+        <section id="panel-upload" class="panel active">
+            <div class="upload-area" id="drop-zone">
+                <div class="upload-icon">
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M24 34V14M16 22l8-8 8 8M10 34v4a4 4 0 004 4h20a4 4 0 004-4v-4"/>
+                    </svg>
+                </div>
+                <p>拖拽文档到此处，或点击选择文件</p>
+                <p class="hint">支持 TXT / Markdown / PDF（最大 100MB）</p>
+                <input type="file" id="file-input" accept=".txt,.md,.markdown,.pdf" hidden>
+            </div>
+
+            <div class="upload-status" id="upload-status" style="display:none">
+                <div class="spinner"></div>
+                <p id="upload-msg">正在上传并处理文档...</p>
+            </div>
+
+            <div class="upload-result" id="upload-result" style="display:none">
+                <h3>上传成功</h3>
+                <table>
+                    <tr><td>文档 ID</td><td id="result-id"></td></tr>
+                    <tr><td>文件名</td><td id="result-name"></td></tr>
+                    <tr><td>分块数</td><td id="result-chunks"></td></tr>
+                </table>
+                <button class="btn-secondary" id="reset-upload-btn">上传另一个文档</button>
+            </div>
+
+            <div class="upload-error" id="upload-error" style="display:none">
+                <p id="upload-error-msg"></p>
+                <button class="btn-secondary" id="retry-upload-btn">重试</button>
+            </div>
+        </section>
+
+        <!-- Chat Panel -->
+        <section id="panel-chat" class="panel">
+            <div class="chat-container">
+                <div class="chat-messages" id="chat-messages"></div>
+                <div class="chat-input-area">
+                    <div class="chat-options">
+                        <label>Top-K: <input type="number" id="top-k" value="5" min="1" max="20"></label>
+                    </div>
+                    <div class="chat-input-row">
+                        <input type="text" id="question-input" placeholder="输入你的问题..." autocomplete="off">
+                        <button id="send-btn">发送</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

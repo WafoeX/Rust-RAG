@@ -1,0 +1,8 @@
+/target
+.env
+.history/
+data/raw/
+data/parsed/
+qdrant_storage/
+model_cache/
+*.log
