@@ -114,6 +114,11 @@ const questionInput = document.getElementById('question-input');
 const sendBtn = document.getElementById('send-btn');
 const topKInput = document.getElementById('top-k');
 
+// Conversation history: only stores Q&A text, not retrieved chunks.
+// Capped at 10 rounds (20 messages) to keep prompt size manageable.
+const MAX_HISTORY_ROUNDS = 10;
+let conversationHistory = [];
+
 sendBtn.addEventListener('click', sendQuestion);
 questionInput.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -139,10 +144,20 @@ async function sendQuestion() {
     questionInput.disabled = true;
 
     try {
+        const body = {
+            question,
+            top_k: topK,
+        };
+
+        // Include conversation history if we have previous rounds
+        if (conversationHistory.length > 0) {
+            body.history = conversationHistory;
+        }
+
         const resp = await fetch('/api/query', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question, top_k: topK }),
+            body: JSON.stringify(body),
         });
 
         if (!resp.ok) {
@@ -152,6 +167,16 @@ async function sendQuestion() {
 
         const data = await resp.json();
         loadingMsg.remove();
+
+        // Save this round to conversation history
+        conversationHistory.push({ role: 'user', content: question });
+        conversationHistory.push({ role: 'assistant', content: data.answer });
+
+        // Cap history size
+        const maxMessages = MAX_HISTORY_ROUNDS * 2;
+        if (conversationHistory.length > maxMessages) {
+            conversationHistory = conversationHistory.slice(-maxMessages);
+        }
 
         let content = '<div class="answer-text">' + escapeHtml(data.answer) + '</div>';
 

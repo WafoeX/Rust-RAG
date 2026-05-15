@@ -62,6 +62,7 @@ pub async fn build_app(config: AppConfig) -> Result<Router> {
         vector_store.clone(),
         config.chunk_size,
         config.chunk_overlap,
+        config.min_chunk_size,
     ));
 
     let query_service = Arc::new(QueryService::new(

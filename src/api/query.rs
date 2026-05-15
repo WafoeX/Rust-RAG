@@ -2,6 +2,7 @@ use axum::{extract::State, Json};
 use std::sync::Arc;
 
 use crate::api::dto::{QueryRequest, QueryResponse, SourceDto};
+use crate::domain::ports::ChatMessage;
 use crate::error::AppError;
 use crate::state::AppState;
 
@@ -13,9 +14,19 @@ pub async fn query(
         return Err(AppError::bad_request("question must not be empty"));
     }
 
+    let history: Vec<ChatMessage> = request
+        .history
+        .unwrap_or_default()
+        .into_iter()
+        .map(|m| ChatMessage {
+            role: m.role,
+            content: m.content,
+        })
+        .collect();
+
     let result = state
         .query_service
-        .query(&request.question, request.top_k)
+        .query(&request.question, request.top_k, &history)
         .await?;
 
     let sources = result

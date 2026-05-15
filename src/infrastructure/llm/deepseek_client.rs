@@ -6,7 +6,7 @@ use reqwest::Client;
 use serde_json::json;
 
 use crate::config::AppConfig;
-use crate::domain::ports::LlmClient;
+use crate::domain::ports::{ChatMessage, LlmClient};
 
 pub struct DeepSeekClient {
     client: Client,
@@ -36,14 +36,30 @@ impl DeepSeekClient {
 #[async_trait]
 impl LlmClient for DeepSeekClient {
     async fn generate_answer(&self, system_prompt: &str, user_prompt: &str) -> Result<String> {
+        self.generate_answer_with_history(system_prompt, &[], user_prompt)
+            .await
+    }
+
+    async fn generate_answer_with_history(
+        &self,
+        system_prompt: &str,
+        history: &[ChatMessage],
+        user_prompt: &str,
+    ) -> Result<String> {
         let url = format!("{}/chat/completions", self.base_url);
+
+        let mut messages = Vec::new();
+        messages.push(json!({"role": "system", "content": system_prompt}));
+
+        for msg in history {
+            messages.push(json!({"role": msg.role, "content": msg.content}));
+        }
+
+        messages.push(json!({"role": "user", "content": user_prompt}));
 
         let body = json!({
             "model": self.model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
+            "messages": messages,
             "stream": false,
             "temperature": 0.2
         });

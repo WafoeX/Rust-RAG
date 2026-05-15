@@ -12,6 +12,7 @@ pub struct AppConfig {
     pub rag_top_k: usize,
     pub chunk_size: usize,
     pub chunk_overlap: usize,
+    pub min_chunk_size: usize,
     pub hf_endpoint: String,
     pub hf_cache_dir: String,
 }
@@ -50,6 +51,10 @@ impl AppConfig {
                 .unwrap_or_else(|_| "80".to_string())
                 .parse()
                 .context("CHUNK_OVERLAP must be a valid usize")?,
+            min_chunk_size: std::env::var("MIN_CHUNK_SIZE")
+                .unwrap_or_else(|_| "100".to_string())
+                .parse()
+                .context("MIN_CHUNK_SIZE must be a valid usize")?,
             hf_endpoint: std::env::var("HF_ENDPOINT")
                 .unwrap_or_else(|_| "https://huggingface.co".to_string()),
             hf_cache_dir: std::env::var("HF_CACHE_DIR")

@@ -13,6 +13,7 @@ pub struct IngestService {
     vector_store: Arc<dyn VectorStore>,
     chunk_size: usize,
     chunk_overlap: usize,
+    min_chunk_size: usize,
 }
 
 pub struct IngestResult {
@@ -27,12 +28,14 @@ impl IngestService {
         vector_store: Arc<dyn VectorStore>,
         chunk_size: usize,
         chunk_overlap: usize,
+        min_chunk_size: usize,
     ) -> Self {
         Self {
             embedder,
             vector_store,
             chunk_size,
             chunk_overlap,
+            min_chunk_size,
         }
     }
 
@@ -41,7 +44,13 @@ impl IngestService {
         let document_id = document.id.clone();
         let doc_file_name = document.file_name.clone();
 
-        let chunks = split_text_to_chunks(&document, self.chunk_size, self.chunk_overlap);
+        let chunks = split_text_to_chunks(
+            &document,
+            file_name,
+            self.chunk_size,
+            self.chunk_overlap,
+            self.min_chunk_size,
+        );
         let total_chunks = chunks.len();
 
         if chunks.is_empty() {

@@ -8,7 +8,7 @@ fn test_split_long_text_into_multiple_chunks() {
         file_name: "test.txt".to_string(),
         content: "A".repeat(1000),
     };
-    let chunks = split_text_to_chunks(&doc, 200, 50);
+    let chunks = split_text_to_chunks(&doc, &doc.file_name.clone(), 200, 50, 100);
     assert!(chunks.len() > 1, "Long text should produce multiple chunks");
 }
 
@@ -19,7 +19,7 @@ fn test_chunk_index_starts_at_zero_and_increments() {
         file_name: "test.txt".to_string(),
         content: "B".repeat(500),
     };
-    let chunks = split_text_to_chunks(&doc, 200, 50);
+    let chunks = split_text_to_chunks(&doc, &doc.file_name.clone(), 200, 50, 100);
     for (i, chunk) in chunks.iter().enumerate() {
         assert_eq!(chunk.chunk_index, i, "chunk_index should be sequential");
     }
@@ -33,7 +33,7 @@ fn test_chunk_overlap_less_than_chunk_size() {
         content: "C".repeat(500),
     };
     // chunk_size=200, chunk_overlap=50 — overlap < size, should not panic
-    let chunks = split_text_to_chunks(&doc, 200, 50);
+    let chunks = split_text_to_chunks(&doc, &doc.file_name.clone(), 200, 50, 100);
     assert!(!chunks.is_empty());
 }
 
@@ -44,7 +44,7 @@ fn test_empty_text_returns_empty_vec() {
         file_name: "empty.txt".to_string(),
         content: "".to_string(),
     };
-    let chunks = split_text_to_chunks(&doc, 200, 50);
+    let chunks = split_text_to_chunks(&doc, &doc.file_name.clone(), 200, 50, 100);
     assert!(chunks.is_empty());
 }
 
@@ -55,7 +55,7 @@ fn test_text_shorter_than_chunk_size_returns_single_chunk() {
         file_name: "short.txt".to_string(),
         content: "Hello, world!".to_string(),
     };
-    let chunks = split_text_to_chunks(&doc, 500, 80);
+    let chunks = split_text_to_chunks(&doc, &doc.file_name.clone(), 500, 80, 100);
     assert_eq!(chunks.len(), 1);
     assert_eq!(chunks[0].content, "Hello, world!");
     assert_eq!(chunks[0].chunk_index, 0);
@@ -70,5 +70,5 @@ fn test_overlap_equal_or_greater_than_size_panics() {
         content: "D".repeat(500),
     };
     // overlap >= chunk_size should panic
-    split_text_to_chunks(&doc, 100, 100);
+    split_text_to_chunks(&doc, &doc.file_name.clone(), 100, 100, 100);
 }

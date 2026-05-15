@@ -1,9 +1,16 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ChatMessage {
+    pub role: String,
+    pub content: String,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct QueryRequest {
     pub question: String,
     pub top_k: Option<usize>,
+    pub history: Option<Vec<ChatMessage>>,
 }
 
 #[derive(Debug, Serialize)]

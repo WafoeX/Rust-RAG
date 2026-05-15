@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::application::prompt_builder::PromptBuilder;
 use crate::domain::{
-    ports::{Embedder, LlmClient, VectorStore},
+    ports::{ChatMessage, Embedder, LlmClient, VectorStore},
     QueryAnswer,
 };
 
@@ -32,7 +32,12 @@ impl QueryService {
         }
     }
 
-    pub async fn query(&self, question: &str, top_k: Option<usize>) -> Result<QueryAnswer> {
+    pub async fn query(
+        &self,
+        question: &str,
+        top_k: Option<usize>,
+        history: &[ChatMessage],
+    ) -> Result<QueryAnswer> {
         let top_k = top_k.unwrap_or(self.default_top_k);
 
         let query_vector = self.embedder.embed_query(question).await?;
@@ -44,10 +49,10 @@ impl QueryService {
             question
         );
 
-        let prompt = self.prompt_builder.build(question, &chunks);
+        let prompt = self.prompt_builder.build(question, &chunks, history);
         let answer = self
             .llm_client
-            .generate_answer(&prompt.system, &prompt.user)
+            .generate_answer_with_history(&prompt.system, history, &prompt.user)
             .await?;
 
         Ok(QueryAnswer {

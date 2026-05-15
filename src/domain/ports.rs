@@ -3,6 +3,13 @@ use async_trait::async_trait;
 
 use super::{Document, DocumentChunk, EmbeddingVector, RetrievedChunk};
 
+/// A single message in a conversation.
+#[derive(Debug, Clone)]
+pub struct ChatMessage {
+    pub role: String,
+    pub content: String,
+}
+
 #[async_trait]
 pub trait Embedder: Send + Sync {
     async fn embed_texts(&self, texts: &[String]) -> Result<Vec<EmbeddingVector>>;
@@ -27,6 +34,12 @@ pub trait VectorStore: Send + Sync {
 #[async_trait]
 pub trait LlmClient: Send + Sync {
     async fn generate_answer(&self, system_prompt: &str, user_prompt: &str) -> Result<String>;
+    async fn generate_answer_with_history(
+        &self,
+        system_prompt: &str,
+        history: &[ChatMessage],
+        user_prompt: &str,
+    ) -> Result<String>;
 }
 
 pub trait DocumentLoader: Send + Sync {
