@@ -38,11 +38,13 @@ impl PromptBuilder {
         // Build context from retrieved chunks
         let mut context = String::new();
         for (i, chunk) in chunks.iter().enumerate() {
+            let score_pct = (chunk.score * 100.0).round();
             context.push_str(&format!(
-                "【资料片段 {}】\n文件：{}\n片段序号：{}\n内容：{}\n",
+                "【资料片段 {}】\n文件：{}\n片段序号：{}\n相关度：{}%\n内容：{}\n",
                 i + 1,
                 chunk.file_name,
                 chunk.chunk_index,
+                score_pct,
                 chunk.content
             ));
         }

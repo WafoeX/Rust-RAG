@@ -71,6 +71,8 @@ pub async fn build_app(config: AppConfig) -> Result<Router> {
         llm_client,
         prompt_builder,
         config.rag_top_k,
+        config.mmr_lambda,
+        config.min_score,
     ));
 
     let state = Arc::new(AppState {

@@ -6,8 +6,6 @@ use crate::domain::ports::{Embedder, VectorStore};
 use crate::infrastructure::document_loader::load_document_by_extension;
 use crate::utils::text_splitter::split_text_to_chunks;
 
-const EMBED_BATCH_SIZE: usize = 32;
-
 pub struct IngestService {
     embedder: Arc<dyn Embedder>,
     vector_store: Arc<dyn VectorStore>,
@@ -61,17 +59,27 @@ impl IngestService {
             });
         }
 
-        // Process in batches to limit memory for large documents
-        for batch_chunks in chunks.chunks(EMBED_BATCH_SIZE) {
-            let texts: Vec<String> = batch_chunks.iter().map(|c| c.content.clone()).collect();
-            let vectors = self.embedder.embed_texts(&texts).await?;
-            self.vector_store.upsert_chunks(batch_chunks, &vectors).await?;
-            tracing::debug!(
-                "Upserted batch of {} chunks for '{}'",
-                batch_chunks.len(),
-                doc_file_name
-            );
-        }
+        // Single-pass embedding: pass all texts at once so the ONNX runtime
+        // can batch internally. spawn_blocking keeps the async runtime responsive.
+        let embedder = self.embedder.clone();
+        let vector_store = self.vector_store.clone();
+
+        let texts: Vec<String> = chunks.iter().map(|c| c.content.clone()).collect();
+        tokio::task::spawn_blocking(move || {
+            let rt = tokio::runtime::Handle::current();
+            rt.block_on(async {
+                let v = embedder.embed_texts(&texts).await?;
+                vector_store.upsert_chunks(&chunks, &v).await?;
+                Ok::<_, anyhow::Error>(())
+            })
+        })
+        .await??;
+
+        tracing::info!(
+            "Ingested document '{}' with {} chunks",
+            doc_file_name,
+            total_chunks
+        );
 
         Ok(IngestResult {
             document_id,

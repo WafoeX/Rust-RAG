@@ -1,6 +1,0 @@
-/target
-.history/
-.env
-qdrant_storage/
-data/raw/
-data/parsed/

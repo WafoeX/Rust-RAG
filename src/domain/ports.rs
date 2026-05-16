@@ -28,6 +28,7 @@ pub trait VectorStore: Send + Sync {
         &self,
         query_vector: &EmbeddingVector,
         top_k: usize,
+        document_id: Option<&str>,
     ) -> Result<Vec<RetrievedChunk>>;
 }
 

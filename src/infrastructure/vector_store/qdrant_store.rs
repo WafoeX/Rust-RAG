@@ -1,15 +1,22 @@
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use qdrant_client::qdrant::{
-    value::Kind, CreateCollectionBuilder, Distance, PointStruct, QueryPointsBuilder,
-    UpsertPointsBuilder, Value, VectorParamsBuilder,
+    value::Kind, Condition, CreateCollectionBuilder, Distance, Filter, PointStruct,
+    QueryPointsBuilder, UpsertPointsBuilder, Value, VectorParamsBuilder,
 };
 use qdrant_client::{Payload, Qdrant};
 
 use crate::config::AppConfig;
 use crate::domain::{ports::VectorStore, DocumentChunk, EmbeddingVector, RetrievedChunk};
+
+fn uuid_to_u64(uuid_str: &str) -> u64 {
+    let mut hasher = std::hash::DefaultHasher::new();
+    uuid_str.hash(&mut hasher);
+    hasher.finish()
+}
 
 pub struct QdrantVectorStore {
     client: Qdrant,
@@ -70,7 +77,7 @@ impl VectorStore for QdrantVectorStore {
         }
 
         let mut points = Vec::with_capacity(chunks.len());
-        for (i, (chunk, vector)) in chunks.iter().zip(vectors.iter()).enumerate() {
+        for (chunk, vector) in chunks.iter().zip(vectors.iter()) {
             let payload: Payload = serde_json::json!({
                 "chunk_id": chunk.id,
                 "document_id": chunk.document_id,
@@ -81,7 +88,8 @@ impl VectorStore for QdrantVectorStore {
             .try_into()
             .context("Failed to convert payload")?;
 
-            let point = PointStruct::new(i as u64, vector.values.clone(), payload);
+            let point_id = uuid_to_u64(&chunk.id);
+            let point = PointStruct::new(point_id, vector.values.clone(), payload);
             points.push(point);
         }
 
@@ -97,17 +105,19 @@ impl VectorStore for QdrantVectorStore {
         &self,
         query_vector: &EmbeddingVector,
         top_k: usize,
+        document_id: Option<&str>,
     ) -> Result<Vec<RetrievedChunk>> {
-        let response = self
-            .client
-            .query(
-                QueryPointsBuilder::new(&self.collection_name)
-                    .query(query_vector.values.clone())
-                    .limit(top_k as u64)
-                    .with_payload(true),
-            )
-            .await
-            .context("Failed to query Qdrant")?;
+        let mut builder = QueryPointsBuilder::new(&self.collection_name)
+            .query(query_vector.values.clone())
+            .limit(top_k as u64)
+            .with_payload(true);
+
+        if let Some(doc_id) = document_id {
+            let filter = Filter::must([Condition::matches("document_id", doc_id.to_string())]);
+            builder = builder.filter(filter);
+        }
+
+        let response = self.client.query(builder).await.context("Failed to query Qdrant")?;
 
         let chunks = response
             .result

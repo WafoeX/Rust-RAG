@@ -13,6 +13,8 @@ pub struct AppConfig {
     pub chunk_size: usize,
     pub chunk_overlap: usize,
     pub min_chunk_size: usize,
+    pub mmr_lambda: f32,
+    pub min_score: f32,
     pub hf_endpoint: String,
     pub hf_cache_dir: String,
 }
@@ -55,6 +57,14 @@ impl AppConfig {
                 .unwrap_or_else(|_| "100".to_string())
                 .parse()
                 .context("MIN_CHUNK_SIZE must be a valid usize")?,
+            mmr_lambda: std::env::var("MMR_LAMBDA")
+                .unwrap_or_else(|_| "0.7".to_string())
+                .parse()
+                .context("MMR_LAMBDA must be a valid f32")?,
+            min_score: std::env::var("MIN_SCORE")
+                .unwrap_or_else(|_| "0.0".to_string())
+                .parse()
+                .context("MIN_SCORE must be a valid f32")?,
             hf_endpoint: std::env::var("HF_ENDPOINT")
                 .unwrap_or_else(|_| "https://huggingface.co".to_string()),
             hf_cache_dir: std::env::var("HF_CACHE_DIR")
